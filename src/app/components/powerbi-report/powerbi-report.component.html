@@ -1,0 +1,42 @@
+<div class="powerbi-container">
+  <div class="header">
+    <h2>Power BI Report - Service Principal Embed</h2>
+    <div class="controls" *ngIf="!isLoading && !errorMessage">
+      <button class="btn btn-primary" (click)="refreshReport()" title="Refresh Report">
+        <span class="icon">↻</span> Refresh
+      </button>
+      <button class="btn btn-primary" (click)="fullscreen()" title="Fullscreen">
+        <span class="icon">⛶</span> Fullscreen
+      </button>
+      <button class="btn btn-primary" (click)="print()" title="Print">
+        <span class="icon">🖨</span> Print
+      </button>
+    </div>
+  </div>
+
+  <div class="content">
+    <div *ngIf="isLoading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading Power BI Report...</p>
+    </div>
+
+    <div *ngIf="errorMessage" class="error-container">
+      <div class="error-icon">⚠</div>
+      <h3>Error Loading Report</h3>
+      <p>{{ errorMessage }}</p>
+      <button class="btn btn-primary" (click)="retryLoad()">Retry</button>
+      <div class="error-details">
+        <p>Please verify:</p>
+        <ul>
+          <li>Service Principal credentials are correct</li>
+          <li>Backend API server is running on port 3000</li>
+          <li>Workspace ID and Report ID are valid</li>
+          <li>Service Principal has access to the workspace</li>
+        </ul>
+      </div>
+    </div>
+
+    <div #reportContainer class="report-container" [class.hidden]="isLoading || errorMessage"></div>
+  </div>
+</div>
+
