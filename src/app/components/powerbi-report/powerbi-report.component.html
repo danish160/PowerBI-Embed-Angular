@@ -36,7 +36,13 @@
       </div>
     </div>
 
-    <div #reportContainer class="report-container" [class.hidden]="isLoading || errorMessage"></div>
+    <powerbi-report 
+      *ngIf="reportConfig && !errorMessage"
+      [embedConfig]="reportConfig"
+      [cssClassName]="reportClass"
+      [phasedEmbedding]="phasedEmbeddingFlag"
+      [eventHandlers]="eventHandlersMap">
+    </powerbi-report>
   </div>
 </div>
 

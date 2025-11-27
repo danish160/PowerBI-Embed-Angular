@@ -1,21 +1,39 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { PowerbiService } from '../../services/powerbi.service';
-import * as pbi from 'powerbi-client';
+import { 
+  PowerBIReportEmbedComponent, 
+  PowerBIEmbedModule 
+} from 'powerbi-client-angular';
+import { IReportEmbedConfiguration, Report, models, service, Embed } from 'powerbi-client';
+
+// Event handler type as per official documentation
+type EventHandler = (event?: service.ICustomEvent<any>, embeddedEntity?: Embed) => void | null;
 
 @Component({
   selector: 'app-powerbi-report',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, PowerBIEmbedModule],
   templateUrl: './powerbi-report.component.html',
   styleUrls: ['./powerbi-report.component.css']
 })
-export class PowerbiReportComponent implements OnInit, OnDestroy {
-  @ViewChild('reportContainer', { static: true }) reportContainer!: ElementRef;
-
+export class PowerbiReportComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild(PowerBIReportEmbedComponent) reportComponent?: PowerBIReportEmbedComponent;
+  
   isLoading = true;
   errorMessage = '';
-  report?: pbi.Embed;
+  reportConfig?: IReportEmbedConfiguration;
+  reportClass = 'report-container';
+  phasedEmbeddingFlag = false;
+  
+  // Event handlers map as per official documentation
+  eventHandlersMap = new Map<string, EventHandler>([
+    ['loaded', () => this.onReportLoaded()],
+    ['rendered', () => this.onReportRendered()],
+    ['error', (event?: service.ICustomEvent<any>) => this.onReportError(event)]
+  ]);
+
+  private report?: Report;
 
   constructor(private powerbiService: PowerbiService) {}
 
@@ -23,92 +41,122 @@ export class PowerbiReportComponent implements OnInit, OnDestroy {
     this.loadReport();
   }
 
-  ngOnDestroy(): void {
-    if (this.report) {
-      this.report.off('loaded');
-      this.report.off('rendered');
-      this.report.off('error');
+  ngAfterViewInit(): void {
+    // Get the Report instance after view initializes
+    if (this.reportComponent) {
+      setTimeout(() => {
+        try {
+          this.report = this.reportComponent?.getReport();
+          console.log('Report instance retrieved:', !!this.report);
+        } catch (error) {
+          console.log('Report not ready yet');
+        }
+      }, 1000);
     }
+  }
+
+  ngOnDestroy(): void {
+    // Cleanup handled by powerbi-client-angular component
   }
 
   loadReport(): void {
     this.isLoading = true;
     this.errorMessage = '';
 
-    this.powerbiService.getPowerBIConfig().subscribe({
+    this.powerbiService.getReportConfig().subscribe({
       next: (config) => {
-        try {
-          this.report = this.powerbiService.embedReport(
-            this.reportContainer.nativeElement,
-            config
-          );
-
-          // Set up event handlers
-          this.report.on('loaded', () => {
-            this.isLoading = false;
-            console.log('Report loaded');
-          });
-
-          this.report.on('rendered', () => {
-            console.log('Report rendered');
-          });
-
-          this.report.on('error', (event) => {
-            const errorDetail = (event as any).detail;
-            this.errorMessage = `Report error: ${errorDetail?.message || 'Unknown error'}`;
-            this.isLoading = false;
-            console.error('Report error:', errorDetail);
-          });
-
-        } catch (error) {
-          this.errorMessage = 'Failed to embed report';
-          this.isLoading = false;
-          console.error('Embed error:', error);
-        }
+        this.reportConfig = config;
+        console.log('Report configuration loaded:', config.tokenType);
       },
       error: (error) => {
-        this.errorMessage = 'Failed to load report configuration';
+        this.errorMessage = 'Failed to load report configuration. Please check backend connection.';
         this.isLoading = false;
         console.error('Config error:', error);
       }
     });
   }
 
-  refreshReport(): void {
-    if (this.report) {
+  // Event handler methods
+  onReportLoaded(): void {
+    this.isLoading = false;
+    console.log('✅ Report loaded successfully');
+  }
+
+  onReportRendered(): void {
+    console.log('✅ Report rendered successfully');
+  }
+
+  onReportError(event?: service.ICustomEvent<any>): void {
+    const errorDetail = event?.detail;
+    console.error('❌ Report error:', errorDetail);
+    
+    if (errorDetail?.message?.includes('API is not accessible')) {
+      this.errorMessage = 'Service Principal APIs are not enabled in Power BI tenant settings. Please contact your Power BI Administrator.';
+    } else if (errorDetail?.message) {
+      this.errorMessage = `Report error: ${errorDetail.message}`;
+    } else {
+      this.errorMessage = 'Failed to load report. Please check configuration.';
+    }
+    
+    this.isLoading = false;
+  }
+
+  private getReportInstance(): Report | undefined {
+    if (!this.report && this.reportComponent) {
       try {
-        (this.report as pbi.Report).refresh();
+        this.report = this.reportComponent.getReport();
+      } catch (error) {
+        console.log('Report not ready yet');
+      }
+    }
+    return this.report;
+  }
+
+  refreshReport(): void {
+    const report = this.getReportInstance();
+    if (report) {
+      try {
+        report.refresh();
         console.log('Report refresh initiated');
       } catch (error) {
         console.error('Refresh error:', error);
         this.errorMessage = 'Failed to refresh report';
       }
+    } else {
+      console.warn('Report not yet loaded');
     }
   }
 
   fullscreen(): void {
-    if (this.report) {
+    const report = this.getReportInstance();
+    if (report) {
       try {
-        (this.report as pbi.Report).fullscreen();
+        report.fullscreen();
         console.log('Fullscreen mode initiated');
       } catch (error) {
         console.error('Fullscreen error:', error);
       }
+    } else {
+      console.warn('Report not yet loaded');
     }
   }
 
   print(): void {
-    if (this.report) {
+    const report = this.getReportInstance();
+    if (report) {
       try {
-        (this.report as pbi.Report).print();
+        report.print();
         console.log('Print initiated');
       } catch (error) {
         console.error('Print error:', error);
       }
+    } else {
+      console.warn('Report not yet loaded');
     }
   }
 
   retryLoad(): void {
+    this.reportConfig = undefined;
     this.loadReport();
   }
 }

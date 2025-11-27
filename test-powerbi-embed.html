@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power BI Embed Test</title>
+    <script src="https://cdn.jsdelivr.net/npm/powerbi-client@2.23.1/dist/powerbi.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        #status {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        #reportContainer {
+            width: 100%;
+            height: 600px;
+            border: 1px solid #ccc;
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        #logs {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .log-entry { margin: 5px 0; }
+        .log-error { color: #dc3545; }
+        .log-success { color: #28a745; }
+        .log-info { color: #007bff; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Power BI Embed Diagnostic Test</h1>
+    
+    <div id="status" class="info">
+        ⏳ Click "Test Backend" to start...
+    </div>
+
+    <div>
+        <button onclick="testBackend()">1️⃣ Test Backend Connection</button>
+        <button onclick="testEmbedToken()">2️⃣ Test Embed Token</button>
+        <button onclick="testReportEmbed()">3️⃣ Try Embed Report</button>
+    </div>
+
+    <div id="logs">
+        <strong>📝 Test Logs:</strong><br>
+        Waiting for test to start...
+    </div>
+
+    <div id="reportContainer"></div>
+
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+        let embedToken = null;
+
+        function log(message, type = 'info') {
+            const logs = document.getElementById('logs');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logs.appendChild(entry);
+            logs.scrollTop = logs.scrollHeight;
+            console.log(message);
+        }
+
+        function setStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+        }
+
+        async function testBackend() {
+            log('Testing backend health endpoint...', 'info');
+            setStatus('⏳ Testing backend connection...', 'info');
+
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    log(`✅ Backend is running! Service: ${data.service}`, 'success');
+                    setStatus('✅ Backend is ONLINE and responding', 'success');
+                } else {
+                    log(`❌ Backend returned error: ${response.status}`, 'error');
+                    setStatus('❌ Backend returned an error', 'error');
+                }
+            } catch (error) {
+                log(`❌ Cannot connect to backend: ${error.message}`, 'error');
+                setStatus('❌ Backend is OFFLINE - Make sure it\'s running on port 3000', 'error');
+            }
+        }
+
+        async function testEmbedToken() {
+            log('Requesting embed token from backend...', 'info');
+            setStatus('⏳ Getting embed token...', 'info');
+
+            try {
+                const response = await fetch(`${API_URL}/powerbi/embed-token`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}'
+                });
+
+                if (response.ok) {
+                    embedToken = await response.json();
+                    log(`✅ Token received! Type: ${embedToken.tokenType}`, 'success');
+                    log(`   Report ID: ${embedToken.reportId}`, 'info');
+                    log(`   Token expires: ${embedToken.tokenExpiry}`, 'info');
+                    setStatus('✅ Embed token received successfully', 'success');
+                } else {
+                    const error = await response.text();
+                    log(`❌ Failed to get token: ${response.status} ${error}`, 'error');
+                    setStatus('❌ Failed to get embed token from backend', 'error');
+                }
+            } catch (error) {
+                log(`❌ Error requesting token: ${error.message}`, 'error');
+                setStatus('❌ Cannot connect to backend', 'error');
+            }
+        }
+
+        async function testReportEmbed() {
+            if (!embedToken) {
+                log('⚠️  No token available. Run "Test Embed Token" first!', 'error');
+                setStatus('⚠️  Please get embed token first', 'error');
+                return;
+            }
+
+            log('Attempting to embed Power BI report...', 'info');
+            setStatus('⏳ Embedding report...', 'info');
+
+            const config = {
+                type: 'report',
+                tokenType: embedToken.tokenType === 'Aad' ? 1 : 0, // 1 = Aad, 0 = Embed
+                accessToken: embedToken.accessToken,
+                embedUrl: embedToken.embedUrl,
+                id: embedToken.reportId,
+                permissions: 1, // View
+                settings: {
+                    panes: {
+                        filters: { expanded: false, visible: true },
+                        pageNavigation: { visible: true }
+                    }
+                }
+            };
+
+            log(`Using token type: ${embedToken.tokenType}`, 'info');
+
+            try {
+                const powerbi = new pbi.service.Service(
+                    pbi.factories.hpmFactory,
+                    pbi.factories.wpmpFactory,
+                    pbi.factories.routerFactory
+                );
+
+                const container = document.getElementById('reportContainer');
+                powerbi.reset(container);
+
+                const report = powerbi.embed(container, config);
+
+                report.on('loaded', () => {
+                    log('✅ Report LOADED successfully!', 'success');
+                    setStatus('✅ SUCCESS! Report is working!', 'success');
+                });
+
+                report.on('rendered', () => {
+                    log('✅ Report RENDERED successfully!', 'success');
+                });
+
+                report.on('error', (event) => {
+                    const error = event.detail;
+                    log(`❌ Report Error: ${JSON.stringify(error)}`, 'error');
+                    
+                    if (error && error.message) {
+                        if (error.message.includes('API is not accessible')) {
+                            setStatus('❌ TENANT SETTING DISABLED! Service Principal APIs not enabled in Power BI', 'error');
+                            log('💡 SOLUTION: Power BI Admin must enable "Allow service principals to use Power BI APIs"', 'info');
+                        } else {
+                            setStatus(`❌ Error: ${error.message}`, 'error');
+                        }
+                    } else {
+                        setStatus('❌ Report failed to load', 'error');
+                    }
+                });
+
+                log('Report embedding initiated...', 'info');
+                setStatus('⏳ Waiting for report to load...', 'info');
+
+            } catch (error) {
+                log(`❌ Embed error: ${error.message}`, 'error');
+                setStatus('❌ Failed to embed report', 'error');
+            }
+        }
+
+        // Auto-test on load
+        window.onload = () => {
+            log('🚀 Diagnostic tool loaded', 'success');
+            log('Click "Test Backend" to begin...', 'info');
+        };
+    </script>
+</body>
+</html>
+

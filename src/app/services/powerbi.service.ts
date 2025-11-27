@@ -3,16 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, throwError } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
-import * as pbi from 'powerbi-client';
-
-export interface PowerBIConfig {
-  type: string;
-  tokenType: pbi.models.TokenType;
-  accessToken: string;
-  embedUrl: string;
-  id: string;
-  settings?: pbi.models.ISettings;
-}
+import { models, IReportEmbedConfiguration } from 'powerbi-client';
 
 export interface EmbedTokenResponse {
   accessToken: string;
@@ -26,15 +17,8 @@ export interface EmbedTokenResponse {
   providedIn: 'root'
 })
 export class PowerbiService {
-  private powerbi: pbi.service.Service;
 
-  constructor(private http: HttpClient) {
-    this.powerbi = new pbi.service.Service(
-      pbi.factories.hpmFactory,
-      pbi.factories.wpmpFactory,
-      pbi.factories.routerFactory
-    );
-  }
+  constructor(private http: HttpClient) { }
 
   /**
    * Get embed token from backend API
@@ -55,24 +39,25 @@ export class PowerbiService {
   }
 
   /**
-   * Get Power BI configuration for embedding
+   * Get Power BI embed configuration for powerbi-client-angular
    */
-  getPowerBIConfig(): Observable<PowerBIConfig> {
+  getReportConfig(): Observable<IReportEmbedConfiguration> {
     return this.getEmbedToken().pipe(
       map(tokenResponse => {
         // Determine token type (Embed or Aad for Service Principal)
         const tokenType = tokenResponse.tokenType === 'Aad' 
-          ? pbi.models.TokenType.Aad 
-          : pbi.models.TokenType.Embed;
+          ? models.TokenType.Aad 
+          : models.TokenType.Embed;
         
         console.log('Token type:', tokenResponse.tokenType || 'Embed');
         
-        const config: PowerBIConfig = {
+        const config: IReportEmbedConfiguration = {
           type: 'report',
           tokenType: tokenType,
           accessToken: tokenResponse.accessToken,
           embedUrl: tokenResponse.embedUrl,
           id: tokenResponse.reportId,
+          permissions: models.Permissions.Read,
           settings: {
             panes: {
               filters: {
@@ -83,53 +68,16 @@ export class PowerbiService {
                 visible: true
               }
             },
-            background: pbi.models.BackgroundType.Transparent,
-            layoutType: pbi.models.LayoutType.Custom,
+            background: models.BackgroundType.Transparent,
+            layoutType: models.LayoutType.Custom,
             customLayout: {
-              displayOption: pbi.models.DisplayOption.FitToWidth
+              displayOption: models.DisplayOption.FitToWidth
             }
           }
         };
         return config;
       })
     );
-  }
-
-  /**
-   * Embed Power BI report in container
-   */
-  embedReport(
-    containerElement: HTMLElement,
-    config: PowerBIConfig
-  ): pbi.Embed {
-    // Reset container
-    this.powerbi.reset(containerElement);
-
-    // Embed the report
-    const report = this.powerbi.embed(containerElement, config);
-
-    // Handle events
-    report.on('loaded', () => {
-      console.log('Report loaded successfully');
-    });
-
-    report.on('rendered', () => {
-      console.log('Report rendered successfully');
-    });
-
-    report.on('error', (event) => {
-      const errorDetail = (event as any).detail;
-      console.error('Report error:', errorDetail);
-    });
-
-    return report;
-  }
-
-  /**
-   * Get Power BI service instance
-   */
-  getPowerBIService(): pbi.service.Service {
-    return this.powerbi;
   }
 }
 
