@@ -6,6 +6,12 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Token cache for Azure AD token (server-side memory cache)
+let tokenCache = {
+  token: null,
+  expiresAt: null
+};
+
 // Middleware
 app.use(cors({
   origin: ['http://localhost:4200', 'http://localhost:4201'],
@@ -21,8 +27,20 @@ app.use((req, res, next) => {
 
 /**
  * Get Azure AD token using Service Principal credentials
+ * Implements server-side caching to reduce Azure AD API calls
  */
 async function getAzureADToken(tenantId, clientId, clientSecret) {
+  // Check if we have a valid cached token
+  const now = Date.now();
+  const bufferTime = 5 * 60 * 1000; // 5 minutes buffer before expiry
+  
+  if (tokenCache.token && tokenCache.expiresAt && (tokenCache.expiresAt - bufferTime) > now) {
+    const timeRemaining = Math.floor((tokenCache.expiresAt - now) / 1000 / 60);
+    console.log(`✅ Using cached Azure AD token (valid for ${timeRemaining} more minutes)`);
+    return tokenCache.token;
+  }
+
+  console.log('🔄 Fetching new Azure AD token...');
   const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
   
   const params = new URLSearchParams();
@@ -38,7 +56,15 @@ async function getAzureADToken(tenantId, clientId, clientSecret) {
       }
     });
     
-    return response.data.access_token;
+    // Cache the token with its expiry time
+    tokenCache.token = response.data.access_token;
+    // Azure AD tokens typically expire in 3599 seconds (1 hour)
+    const expiresIn = response.data.expires_in || 3599;
+    tokenCache.expiresAt = Date.now() + (expiresIn * 1000);
+    
+    console.log(`✅ New Azure AD token cached (expires in ${Math.floor(expiresIn / 60)} minutes)`);
+    
+    return tokenCache.token;
   } catch (error) {
     console.error('Error getting Azure AD token:', error.response?.data || error.message);
     throw new Error('Failed to get Azure AD token');
@@ -234,6 +260,87 @@ app.get('/api/health', (req, res) => {
 });
 
 /**
+ * Get all workspaces (groups) the Service Principal has access to
+ * This verifies that the token has Workspace.Read.All or Workspace.ReadWrite.All permission
+ */
+app.get('/api/powerbi/workspaces', async (req, res) => {
+  try {
+    console.log('Getting list of workspaces...');
+    
+    // Get Azure AD token (uses cache if available)
+    const accessToken = await getAzureADToken(
+      process.env.TENANT_ID,
+      process.env.CLIENT_ID,
+      process.env.CLIENT_SECRET
+    );
+    
+    // Call Power BI API to get workspaces
+    const response = await axios.get(
+      'https://api.powerbi.com/v1.0/myorg/groups',
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+    
+    console.log(`✅ Found ${response.data.value?.length || 0} workspace(s)`);
+    
+    res.json({
+      status: 'SUCCESS',
+      workspaceCount: response.data.value?.length || 0,
+      workspaces: response.data.value
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting workspaces:', error.response?.status, error.response?.data);
+    
+    if (error.response?.status === 403) {
+      return res.status(403).json({
+        status: 'PERMISSION_DENIED',
+        message: 'Token does not have Workspace.Read.All permission',
+        details: 'Add "Workspace.Read.All" permission to your Azure AD App Registration',
+        error: error.response?.data
+      });
+    }
+    
+    res.status(500).json({
+      status: 'FAILED',
+      error: error.response?.data || error.message
+    });
+  }
+});
+
+/**
+ * Token cache status endpoint
+ */
+app.get('/api/token-cache/status', (req, res) => {
+  const now = Date.now();
+  const isValid = tokenCache.token && tokenCache.expiresAt && tokenCache.expiresAt > now;
+  
+  res.json({
+    cached: !!tokenCache.token,
+    valid: isValid,
+    expiresAt: tokenCache.expiresAt ? new Date(tokenCache.expiresAt).toISOString() : null,
+    timeRemainingSeconds: isValid ? Math.floor((tokenCache.expiresAt - now) / 1000) : 0
+  });
+});
+
+/**
+ * Clear token cache endpoint (useful for testing or forcing refresh)
+ */
+app.post('/api/token-cache/clear', (req, res) => {
+  tokenCache.token = null;
+  tokenCache.expiresAt = null;
+  console.log('🗑️ Token cache cleared');
+  
+  res.json({
+    message: 'Token cache cleared successfully',
+    timestamp: new Date().toISOString()
+  });
+});
+
+/**
  * Root endpoint
  */
 app.get('/', (req, res) => {
@@ -241,8 +348,11 @@ app.get('/', (req, res) => {
     message: 'Power BI Embed API Server',
     version: '1.0.0',
     endpoints: {
-      health: '/api/health',
-      embedToken: 'POST /api/powerbi/embed-token'
+      health: 'GET /api/health',
+      embedToken: 'POST /api/powerbi/embed-token',
+      workspaces: 'GET /api/powerbi/workspaces',
+      tokenCacheStatus: 'GET /api/token-cache/status',
+      clearTokenCache: 'POST /api/token-cache/clear'
     }
   });
 });
@@ -270,6 +380,12 @@ app.listen(PORT, () => {
 ║   - GET  /                                                ║
 ║   - GET  /api/health                                      ║
 ║   - POST /api/powerbi/embed-token                         ║
+║   - GET  /api/powerbi/workspaces                          ║
+║   - GET  /api/token-cache/status                          ║
+║   - POST /api/token-cache/clear                           ║
+║                                                           ║
+║   Token Caching: Enabled ✓                                ║
+║   (Azure AD tokens cached server-side for performance)    ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
 

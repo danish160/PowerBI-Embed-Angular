@@ -1,0 +1,51 @@
+<nav class="navbar">
+  <div class="navbar-brand">
+    <a routerLink="/" class="brand-link">
+      <span class="brand-icon">📊</span>
+      <span class="brand-text">Power BI Embed</span>
+    </a>
+  </div>
+
+  <div class="navbar-menu">
+    <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">
+      <span class="nav-icon">🏠</span>
+      <span>Home</span>
+    </a>
+
+    <a routerLink="/report" routerLinkActive="active" class="nav-item">
+      <span class="nav-icon">📈</span>
+      <span>Current Report</span>
+    </a>
+
+    <div class="nav-divider"></div>
+
+    <div class="nav-section">
+      <span class="nav-section-title">Workspaces</span>
+      
+      <div *ngIf="isLoading" class="nav-loading">
+        <span class="loading-spinner"></span>
+        <span>Loading...</span>
+      </div>
+
+      <div *ngIf="errorMessage" class="nav-error">
+        <span>⚠️ {{ errorMessage }}</span>
+      </div>
+
+      <a 
+        *ngFor="let workspace of workspaces" 
+        [routerLink]="['/workspace', workspace.id]"
+        routerLinkActive="active"
+        class="nav-item workspace-item"
+        [title]="workspace.name">
+        <span class="nav-icon">📁</span>
+        <span class="workspace-name">{{ workspace.name }}</span>
+        <span *ngIf="workspace.isOnDedicatedCapacity" class="capacity-badge" title="Premium Capacity">⚡</span>
+        <span *ngIf="workspace.isReadOnly" class="readonly-badge" title="Read Only">🔒</span>
+      </a>
+
+      <div *ngIf="!isLoading && workspaces.length === 0" class="nav-empty">
+        <span>No workspaces available</span>
+      </div>
+    </div>
+  </div>
+</nav>

@@ -1,0 +1,94 @@
+<div class="home-container">
+  <div class="hero-section">
+    <h1>Welcome to Power BI Embed</h1>
+    <p class="subtitle">Explore your Power BI reports and dashboards using Service Principal authentication</p>
+  </div>
+
+  <div class="info-cards">
+    <div class="info-card">
+      <div class="card-icon">🔐</div>
+      <h3>Service Principal</h3>
+      <p>Secure authentication using Azure AD Service Principal with token caching</p>
+    </div>
+
+    <div class="info-card">
+      <div class="card-icon">⚡</div>
+      <h3>Fast Performance</h3>
+      <p>Server-side token caching reduces API calls and improves response times</p>
+    </div>
+
+    <div class="info-card">
+      <div class="card-icon">📊</div>
+      <h3>Interactive Reports</h3>
+      <p>Full-featured Power BI embedded reports with filtering, drilling, and more</p>
+    </div>
+  </div>
+
+  <div class="workspaces-section">
+    <h2>Available Workspaces</h2>
+    
+    <div *ngIf="isLoading" class="loading">
+      <div class="spinner"></div>
+      <p>Loading workspaces...</p>
+    </div>
+
+    <div *ngIf="!isLoading && workspaces.length > 0" class="workspace-grid">
+      <a 
+        *ngFor="let workspace of workspaces" 
+        [routerLink]="['/workspace', workspace.id]"
+        class="workspace-card">
+        <div class="workspace-header">
+          <span class="workspace-icon">📁</span>
+          <h3>{{ workspace.name }}</h3>
+        </div>
+        <div class="workspace-meta">
+          <span class="meta-item" *ngIf="workspace.isOnDedicatedCapacity">
+            <span class="badge premium">⚡ Premium</span>
+          </span>
+          <span class="meta-item" *ngIf="workspace.isReadOnly">
+            <span class="badge readonly">🔒 Read Only</span>
+          </span>
+          <span class="meta-item" *ngIf="!workspace.isReadOnly && !workspace.isOnDedicatedCapacity">
+            <span class="badge shared">📦 Shared</span>
+          </span>
+        </div>
+        <div class="workspace-footer">
+          <span class="view-link">View Reports →</span>
+        </div>
+      </a>
+    </div>
+
+    <div *ngIf="!isLoading && workspaces.length === 0" class="empty-state">
+      <div class="empty-icon">📂</div>
+      <h3>No workspaces found</h3>
+      <p>Make sure your Service Principal has access to at least one workspace</p>
+    </div>
+  </div>
+
+  <div class="quick-start">
+    <h2>Quick Start</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h4>Navigate Workspaces</h4>
+          <p>Use the sidebar to browse available workspaces</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h4>View Current Report</h4>
+          <p>Click "Current Report" to see the embedded report</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h4>Interact</h4>
+          <p>Use refresh, fullscreen, and print controls to interact with reports</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
