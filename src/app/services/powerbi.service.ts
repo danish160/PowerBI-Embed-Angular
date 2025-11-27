@@ -19,6 +19,7 @@ export interface EmbedTokenResponse {
   embedUrl: string;
   reportId: string;
   tokenExpiry: string;
+  tokenType?: string; // 'Embed' or 'Aad'
 }
 
 @Injectable({
@@ -59,9 +60,16 @@ export class PowerbiService {
   getPowerBIConfig(): Observable<PowerBIConfig> {
     return this.getEmbedToken().pipe(
       map(tokenResponse => {
+        // Determine token type (Embed or Aad for Service Principal)
+        const tokenType = tokenResponse.tokenType === 'Aad' 
+          ? pbi.models.TokenType.Aad 
+          : pbi.models.TokenType.Embed;
+        
+        console.log('Token type:', tokenResponse.tokenType || 'Embed');
+        
         const config: PowerBIConfig = {
           type: 'report',
-          tokenType: pbi.models.TokenType.Embed,
+          tokenType: tokenType,
           accessToken: tokenResponse.accessToken,
           embedUrl: tokenResponse.embedUrl,
           id: tokenResponse.reportId,

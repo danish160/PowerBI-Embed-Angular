@@ -7,7 +7,10 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: ['http://localhost:4200', 'http://localhost:4201'],
+  credentials: true
+}));
 app.use(express.json());
 
 // Logging middleware
@@ -59,6 +62,15 @@ async function getPowerBIEmbedToken(accessToken, workspaceId, reportId) {
     });
     console.log('Report details retrieved:', reportResponse.data.name);
     console.log('Dataset ID:', reportResponse.data.datasetId);
+    console.log('Dataset Workspace ID:', reportResponse.data.datasetWorkspaceId);
+
+    // Check if dataset is in a different workspace
+    const datasetWorkspaceId = reportResponse.data.datasetWorkspaceId || workspaceId;
+    if (datasetWorkspaceId !== workspaceId) {
+      console.log('⚠️  WARNING: Dataset is in a different workspace!');
+      console.log('   Report Workspace:', workspaceId);
+      console.log('   Dataset Workspace:', datasetWorkspaceId);
+    }
 
     // Try the simpler GenerateToken API first
     console.log('Generating embed token...');
@@ -68,6 +80,9 @@ async function getPowerBIEmbedToken(accessToken, workspaceId, reportId) {
     
     // First try: Simple approach with just datasets and reports
     let embedTokenResponse;
+    let embedToken;
+    let tokenType = 'Embed';
+    
     try {
       const embedTokenUrl = `https://api.powerbi.com/v1.0/myorg/GenerateToken`;
       embedTokenResponse = await axios.post(
@@ -83,41 +98,56 @@ async function getPowerBIEmbedToken(accessToken, workspaceId, reportId) {
           }
         }
       );
-      console.log('Embed token generated successfully (simple method)');
+      embedToken = embedTokenResponse.data.token;
+      console.log('✅ Embed token generated successfully (simple method)');
     } catch (simpleError) {
-      console.log('Simple method failed, trying with targetWorkspaces...');
-      // Second try: Add targetWorkspaces
-      const embedTokenUrl = `https://api.powerbi.com/v1.0/myorg/GenerateToken`;
-      embedTokenResponse = await axios.post(
-        embedTokenUrl,
-        {
-          datasets: [{ 
-            id: reportResponse.data.datasetId,
-            xmlaPermissions: 'ReadOnly'
-          }],
-          reports: [{ 
-            allowEdit: false,
-            id: reportId 
-          }],
-          targetWorkspaces: [{
-            id: workspaceId
-          }]
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
+      console.log('❌ Simple method failed:', simpleError.response?.status);
+      console.log('Trying with targetWorkspaces...');
+      
+      try {
+        // Second try: Add targetWorkspaces and dataset workspace
+        const embedTokenUrl = `https://api.powerbi.com/v1.0/myorg/GenerateToken`;
+        embedTokenResponse = await axios.post(
+          embedTokenUrl,
+          {
+            datasets: [{ 
+              id: reportResponse.data.datasetId,
+              xmlaPermissions: 'ReadOnly'
+            }],
+            reports: [{ 
+              allowEdit: false,
+              id: reportId 
+            }],
+            targetWorkspaces: [{
+              id: datasetWorkspaceId
+            }]
+          },
+          {
+            headers: {
+              'Authorization': `Bearer ${accessToken}`,
+              'Content-Type': 'application/json'
+            }
           }
-        }
-      );
-      console.log('Embed token generated successfully (with targetWorkspaces)');
+        );
+        embedToken = embedTokenResponse.data.token;
+        console.log('✅ Embed token generated successfully (with targetWorkspaces)');
+      } catch (workspaceError) {
+        console.log('❌ Both methods failed. Trying Service Principal token directly...');
+        console.log('⚠️  This requires "Service principals can use Power BI APIs" to be enabled in tenant settings');
+        
+        // Third try: Use the Azure AD token directly (Service Principal mode)
+        embedToken = accessToken;
+        tokenType = 'Aad';
+        console.log('ℹ️  Using Service Principal token directly (Aad token type)');
+      }
     }
 
     return {
-      accessToken: embedTokenResponse.data.token,
+      accessToken: embedToken,
       embedUrl: reportResponse.data.embedUrl,
       reportId: reportResponse.data.id,
-      tokenExpiry: embedTokenResponse.data.expiration
+      tokenExpiry: embedTokenResponse?.data?.expiration || new Date(Date.now() + 3600000).toISOString(),
+      tokenType: tokenType
     };
   } catch (error) {
     console.error('Error getting Power BI embed token:');
