@@ -316,6 +316,66 @@ app.get('/api/powerbi/workspaces', async (req, res) => {
 });
 
 /**
+ * Get all reports in a specific workspace
+ */
+app.get('/api/powerbi/workspaces/:workspaceId/reports', async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    console.log(`Getting reports for workspace: ${workspaceId}...`);
+    
+    // Get Azure AD token (uses cache if available)
+    const accessToken = await getAzureADToken(
+      process.env.TENANT_ID,
+      process.env.CLIENT_ID,
+      process.env.CLIENT_SECRET
+    );
+    
+    // Call Power BI API to get reports in the workspace
+    const response = await axios.get(
+      `https://api.powerbi.com/v1.0/myorg/groups/${workspaceId}/reports`,
+      {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      }
+    );
+    
+    console.log(`✅ Found ${response.data.value?.length || 0} report(s) in workspace ${workspaceId}`);
+    
+    res.json({
+      status: 'SUCCESS',
+      workspaceId: workspaceId,
+      reportCount: response.data.value?.length || 0,
+      reports: response.data.value
+    });
+    
+  } catch (error) {
+    console.error('❌ Error getting reports:', error.response?.status, error.response?.data);
+    
+    if (error.response?.status === 403) {
+      return res.status(403).json({
+        status: 'PERMISSION_DENIED',
+        message: 'Token does not have Report.Read.All permission',
+        error: error.response?.data
+      });
+    }
+    
+    if (error.response?.status === 404) {
+      return res.status(404).json({
+        status: 'NOT_FOUND',
+        message: 'Workspace not found or no access',
+        error: error.response?.data
+      });
+    }
+    
+    res.status(500).json({
+      status: 'FAILED',
+      error: error.response?.data || error.message
+    });
+  }
+});
+
+/**
  * Token cache status endpoint
  */
 app.get('/api/token-cache/status', (req, res) => {
@@ -355,6 +415,7 @@ app.get('/', (req, res) => {
       health: 'GET /api/health',
       embedToken: 'POST /api/powerbi/embed-token',
       workspaces: 'GET /api/powerbi/workspaces',
+      workspaceReports: 'GET /api/powerbi/workspaces/:workspaceId/reports',
       tokenCacheStatus: 'GET /api/token-cache/status',
       clearTokenCache: 'POST /api/token-cache/clear'
     }
@@ -385,6 +446,7 @@ app.listen(PORT, () => {
 ║   - GET  /api/health                                      ║
 ║   - POST /api/powerbi/embed-token                         ║
 ║   - GET  /api/powerbi/workspaces                          ║
+║   - GET  /api/powerbi/workspaces/:id/reports              ║
 ║   - GET  /api/token-cache/status                          ║
 ║   - POST /api/token-cache/clear                           ║
 ║                                                           ║
