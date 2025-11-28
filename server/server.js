@@ -27,10 +27,11 @@ app.use((req, res, next) => {
 
 /**
  * Get Azure AD token using Service Principal credentials
- * Implements server-side caching to reduce Azure AD API calls
+ * TOKEN CACHING DISABLED - Always fetches fresh token
  */
 async function getAzureADToken(tenantId, clientId, clientSecret) {
-  // Check if we have a valid cached token
+  // CACHING DISABLED - Always fetch new token
+  /* 
   const now = Date.now();
   const bufferTime = 5 * 60 * 1000; // 5 minutes buffer before expiry
   
@@ -39,8 +40,9 @@ async function getAzureADToken(tenantId, clientId, clientSecret) {
     console.log(`✅ Using cached Azure AD token (valid for ${timeRemaining} more minutes)`);
     return tokenCache.token;
   }
+  */
 
-  console.log('🔄 Fetching new Azure AD token...');
+  console.log('🔄 Fetching new Azure AD token (caching disabled)...');
   const url = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
   
   const params = new URLSearchParams();
@@ -56,15 +58,17 @@ async function getAzureADToken(tenantId, clientId, clientSecret) {
       }
     });
     
-    // Cache the token with its expiry time
+    // CACHING DISABLED - Still store for status endpoint but don't use
+    /*
     tokenCache.token = response.data.access_token;
-    // Azure AD tokens typically expire in 3599 seconds (1 hour)
     const expiresIn = response.data.expires_in || 3599;
     tokenCache.expiresAt = Date.now() + (expiresIn * 1000);
-    
     console.log(`✅ New Azure AD token cached (expires in ${Math.floor(expiresIn / 60)} minutes)`);
+    */
     
-    return tokenCache.token;
+    console.log(`✅ New Azure AD token fetched (caching disabled)`);
+    
+    return response.data.access_token;
   } catch (error) {
     console.error('Error getting Azure AD token:', error.response?.data || error.message);
     throw new Error('Failed to get Azure AD token');
@@ -384,8 +388,8 @@ app.listen(PORT, () => {
 ║   - GET  /api/token-cache/status                          ║
 ║   - POST /api/token-cache/clear                           ║
 ║                                                           ║
-║   Token Caching: Enabled ✓                                ║
-║   (Azure AD tokens cached server-side for performance)    ║
+║   Token Caching: DISABLED ⚠️                              ║
+║   (Fetching fresh Azure AD token on every request)       ║
 ║                                                           ║
 ╚═══════════════════════════════════════════════════════════╝
 
