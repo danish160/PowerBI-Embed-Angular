@@ -1,0 +1,46 @@
+# Angular specific ignores
+
+# Compiled output
+/dist
+/tmp
+/out-tsc
+/bazel-out
+
+# Node
+/node_modules
+npm-debug.log
+yarn-error.log
+
+# Angular cache
+/.angular/cache
+.sass-cache/
+
+# Testing
+/coverage
+/libpeerconnection.log
+testem.log
+/typings
+
+# IDEs and editors
+.idea/
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.history/*
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Environment files (keep these secure)
+src/environments/environment.ts
+src/environments/environment.prod.ts
+

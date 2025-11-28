@@ -1,14 +1,13 @@
 {
-  "name": "powerbi-embed-angular",
+  "name": "powerbi-embed-angular-frontend",
   "version": "1.0.0",
-  "description": "Angular application for embedding Power BI reports using Service Principal",
+  "description": "Angular frontend for Power BI embed application",
   "scripts": {
     "ng": "ng",
     "start": "ng serve --port 4201",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
-    "start:server": "node server/server.js"
+    "test": "ng test"
   },
   "private": true,
   "dependencies": {
@@ -31,12 +30,7 @@
     "@angular/compiler-cli": "^17.0.0",
     "@types/jasmine": "~5.1.0",
     "@types/node": "^20.0.0",
-    "typescript": "~5.2.2",
-    "@azure/msal-node": "^2.5.0",
-    "axios": "^1.6.0",
-    "cors": "^2.8.5",
-    "dotenv": "^16.3.1",
-    "express": "^4.18.2"
+    "typescript": "~5.2.2"
   }
 }
 
