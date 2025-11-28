@@ -1,6 +1,7 @@
 import { Routes } from '@angular/router';
 import { HomeComponent } from './components/home/home.component';
 import { PowerbiReportComponent } from './components/powerbi-report/powerbi-report.component';
+import { WorkspaceDetailComponent } from './components/workspace-detail/workspace-detail.component';
 
 export const routes: Routes = [
   {
@@ -13,7 +14,7 @@ export const routes: Routes = [
   },
   {
     path: 'workspace/:id',
-    component: HomeComponent  // TODO: Create workspace detail component later
+    component: WorkspaceDetailComponent
   },
   {
     path: '**',

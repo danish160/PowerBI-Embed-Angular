@@ -17,6 +17,22 @@ export interface WorkspacesResponse {
   workspaces: Workspace[];
 }
 
+export interface Report {
+  id: string;
+  name: string;
+  webUrl: string;
+  embedUrl: string;
+  datasetId?: string;
+  reportType?: string;
+}
+
+export interface ReportsResponse {
+  status: string;
+  workspaceId: string;
+  reportCount: number;
+  reports: Report[];
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -26,6 +42,10 @@ export class WorkspaceService {
 
   getWorkspaces(): Observable<WorkspacesResponse> {
     return this.http.get<WorkspacesResponse>(`${environment.apiUrl}/powerbi/workspaces`);
+  }
+
+  getReportsInWorkspace(workspaceId: string): Observable<ReportsResponse> {
+    return this.http.get<ReportsResponse>(`${environment.apiUrl}/powerbi/workspaces/${workspaceId}/reports`);
   }
 }
 

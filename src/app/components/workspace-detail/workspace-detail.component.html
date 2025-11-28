@@ -1,0 +1,94 @@
+<div class="workspace-detail-container">
+  <!-- Header -->
+  <div class="header-section">
+    <div class="breadcrumb">
+      <a routerLink="/" class="breadcrumb-link">Home</a>
+      <span class="breadcrumb-separator">›</span>
+      <span class="breadcrumb-current">{{ workspace?.name || 'Workspace' }}</span>
+    </div>
+    
+    <div class="workspace-header">
+      <div class="workspace-title">
+        <span class="workspace-icon">📁</span>
+        <h1>{{ workspace?.name || 'Loading...' }}</h1>
+      </div>
+      <div class="workspace-badges" *ngIf="workspace">
+        <span class="badge premium" *ngIf="workspace.isOnDedicatedCapacity">
+          <span>⚡</span> Premium Capacity
+        </span>
+        <span class="badge readonly" *ngIf="workspace.isReadOnly">
+          <span>🔒</span> Read Only
+        </span>
+        <span class="badge shared" *ngIf="!workspace.isOnDedicatedCapacity">
+          <span>📦</span> Shared Capacity
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div *ngIf="isLoading" class="loading-container">
+    <div class="spinner"></div>
+    <p>Loading reports...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="!isLoading && errorMessage" class="error-container">
+    <div class="error-icon">⚠️</div>
+    <h3>Error Loading Reports</h3>
+    <p>{{ errorMessage }}</p>
+    <button class="btn btn-retry" (click)="retryLoad()">
+      <span>↻</span> Retry
+    </button>
+  </div>
+
+  <!-- Reports Grid -->
+  <div *ngIf="!isLoading && !errorMessage" class="reports-section">
+    <div class="reports-header">
+      <h2>Reports</h2>
+      <span class="report-count">{{ reports.length }} {{ reports.length === 1 ? 'report' : 'reports' }}</span>
+    </div>
+
+    <!-- Empty State -->
+    <div *ngIf="reports.length === 0" class="empty-state">
+      <div class="empty-icon">📊</div>
+      <h3>No reports found</h3>
+      <p>This workspace doesn't contain any reports yet.</p>
+    </div>
+
+    <!-- Reports List -->
+    <div *ngIf="reports.length > 0" class="reports-grid">
+      <div *ngFor="let report of reports" class="report-card">
+        <div class="report-card-header">
+          <div class="report-icon">📈</div>
+          <div class="report-info">
+            <h3 class="report-name">{{ report.name }}</h3>
+            <p class="report-id">ID: {{ report.id }}</p>
+          </div>
+        </div>
+
+        <div class="report-card-body">
+          <div class="report-meta">
+            <div class="meta-item" *ngIf="report.datasetId">
+              <span class="meta-label">Dataset:</span>
+              <span class="meta-value">{{ report.datasetId }}</span>
+            </div>
+            <div class="meta-item" *ngIf="report.reportType">
+              <span class="meta-label">Type:</span>
+              <span class="meta-value">{{ report.reportType }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="report-card-footer">
+          <a [href]="report.webUrl" target="_blank" class="btn btn-secondary">
+            <span>🔗</span> Open in Power BI
+          </a>
+          <button class="btn btn-primary" title="Embed this report (coming soon)">
+            <span>📊</span> Embed Report
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
