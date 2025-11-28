@@ -1,8 +1,11 @@
 # Power BI Embed Application
 
-This project consists of two separate applications:
+This project consists of a frontend and your choice of TWO backend implementations:
 - **Frontend**: Angular application for embedding Power BI reports
-- **Backend**: Node.js/Express API for authentication and Power BI token generation
+- **Backend Option 1**: Node.js/Express API (JavaScript)
+- **Backend Option 2**: .NET 8 Web API (C#)
+
+Both backends provide identical functionality - choose whichever fits your team better!
 
 ## Project Structure
 
@@ -12,17 +15,27 @@ powerbi-embed-angular/
 │   ├── src/
 │   ├── package.json
 │   └── node_modules/
-├── be-node/             # Node.js Backend API
+├── be-node/             # Node.js Backend API (Option 1)
 │   ├── server.js
 │   ├── .env
 │   ├── package.json
 │   └── node_modules/
-└── README.md
+├── be-dotnet/           # .NET Backend API (Option 2)
+│   ├── Controllers/
+│   ├── Services/
+│   ├── Models/
+│   ├── Program.cs
+│   ├── .env
+│   └── be-dotnet.csproj
+├── README.md
+└── BACKEND_SWITCHING_GUIDE.md
 ```
 
 ## Setup Instructions
 
-### Backend Setup (be-node)
+### Backend Setup (Choose One)
+
+#### Option A: Node.js Backend (be-node)
 
 1. Navigate to backend directory:
    ```bash
@@ -35,9 +48,8 @@ powerbi-embed-angular/
    ```
 
 3. Configure environment variables:
-   - Copy `.env.example` to `.env` (if available)
-   - Or create `.env` with the following:
-   ```
+   ```bash
+   # Create .env file
    TENANT_ID=your_tenant_id
    CLIENT_ID=your_client_id
    CLIENT_SECRET=your_client_secret
@@ -50,6 +62,36 @@ powerbi-embed-angular/
    ```
 
    The backend API will run on `http://localhost:3000`
+
+#### Option B: .NET Backend (be-dotnet)
+
+1. Navigate to backend directory:
+   ```bash
+   cd be-dotnet
+   ```
+
+2. Restore NuGet packages:
+   ```bash
+   dotnet restore
+   ```
+
+3. Configure environment variables:
+   ```bash
+   # Create .env file (same format as Node.js)
+   TENANT_ID=your_tenant_id
+   CLIENT_ID=your_client_id
+   CLIENT_SECRET=your_client_secret
+   PORT=3000
+   ```
+
+4. Start the backend server:
+   ```bash
+   dotnet run
+   ```
+
+   The backend API will run on `http://localhost:3000`
+
+**See [BACKEND_SWITCHING_GUIDE.md](BACKEND_SWITCHING_GUIDE.md) for more details on choosing and switching between backends.**
 
 ### Frontend Setup (fe-angular)
 
@@ -72,7 +114,9 @@ powerbi-embed-angular/
 
 ## Running the Full Application
 
-You need to run both applications simultaneously:
+You need to run both frontend and ONE backend simultaneously:
+
+### Using Node.js Backend
 
 **Terminal 1 - Backend:**
 ```bash
@@ -84,6 +128,36 @@ npm start
 ```bash
 cd fe-angular
 npm start
+```
+
+### Using .NET Backend
+
+**Terminal 1 - Backend:**
+```bash
+cd be-dotnet
+dotnet run
+```
+
+**Terminal 2 - Frontend:**
+```bash
+cd fe-angular
+npm start
+```
+
+### Using Windows Batch Scripts
+
+**Node.js Backend:**
+```bash
+start-backend.bat      # Start Node.js backend
+start-frontend.bat     # Start frontend
+# Or
+start-all.bat         # Start both
+```
+
+**.NET Backend:**
+```bash
+start-backend-dotnet.bat  # Start .NET backend
+start-frontend.bat        # Start frontend
 ```
 
 Then open your browser to `http://localhost:4201`
@@ -125,11 +199,17 @@ The backend exposes the following endpoints:
 - TypeScript
 - powerbi-client-angular
 
-**Backend:**
-- Node.js
-- Express
+**Backend (Node.js):**
+- Node.js 18+
+- Express 4.18+
 - Axios
 - CORS
+
+**Backend (.NET):**
+- .NET 8
+- ASP.NET Core Web API
+- HttpClient
+- Built-in CORS support
 
 ## Security Notes
 
