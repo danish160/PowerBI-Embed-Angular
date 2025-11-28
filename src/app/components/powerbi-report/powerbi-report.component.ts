@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, ViewChild, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute, RouterModule } from '@angular/router';
 import { PowerbiService } from '../../services/powerbi.service';
 import { 
   PowerBIReportEmbedComponent, 
@@ -13,13 +14,15 @@ type EventHandler = (event?: service.ICustomEvent<any>, embeddedEntity?: Embed) 
 @Component({
   selector: 'app-powerbi-report',
   standalone: true,
-  imports: [CommonModule, PowerBIEmbedModule],
+  imports: [CommonModule, PowerBIEmbedModule, RouterModule],
   templateUrl: './powerbi-report.component.html',
   styleUrls: ['./powerbi-report.component.css']
 })
 export class PowerbiReportComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild(PowerBIReportEmbedComponent) reportComponent?: PowerBIReportEmbedComponent;
   
+  workspaceId: string = '';
+  reportId: string = '';
   isLoading = true;
   errorMessage = '';
   reportConfig?: IReportEmbedConfiguration;
@@ -35,10 +38,25 @@ export class PowerbiReportComponent implements OnInit, OnDestroy, AfterViewInit 
 
   private report?: Report;
 
-  constructor(private powerbiService: PowerbiService) {}
+  constructor(
+    private powerbiService: PowerbiService,
+    private route: ActivatedRoute
+  ) {}
 
   ngOnInit(): void {
-    this.loadReport();
+    // Get workspace ID and report ID from route parameters
+    this.route.params.subscribe(params => {
+      this.workspaceId = params['workspaceId'];
+      this.reportId = params['reportId'];
+      
+      if (this.workspaceId && this.reportId) {
+        console.log(`Loading report ${this.reportId} from workspace ${this.workspaceId}`);
+        this.loadReport();
+      } else {
+        this.errorMessage = 'Invalid route parameters. Workspace ID and Report ID are required.';
+        this.isLoading = false;
+      }
+    });
   }
 
   ngAfterViewInit(): void {
@@ -63,10 +81,12 @@ export class PowerbiReportComponent implements OnInit, OnDestroy, AfterViewInit 
     this.isLoading = true;
     this.errorMessage = '';
 
-    this.powerbiService.getReportConfig().subscribe({
+    this.powerbiService.getReportConfig(this.workspaceId, this.reportId).subscribe({
       next: (config) => {
         this.reportConfig = config;
-        console.log('Report configuration loaded:', config.tokenType);
+        console.log('Report configuration loaded. Token Type:', config.tokenType === 0 ? 'Embed' : 'Aad');
+        console.log('Report ID:', config.id);
+        console.log('Embed URL:', config.embedUrl);
       },
       error: (error) => {
         this.errorMessage = 'Failed to load report configuration. Please check backend connection.';

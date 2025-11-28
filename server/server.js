@@ -189,26 +189,33 @@ async function getPowerBIEmbedToken(accessToken, workspaceId, reportId) {
 }
 
 /**
- * API endpoint to get embed token
+ * Generate Power BI embed token for a specific report
+ * Uses URL parameters instead of .env file
  */
-app.post('/api/powerbi/embed-token', async (req, res) => {
+app.get('/api/powerbi/workspaces/:workspaceId/reports/:reportId/embed-token', async (req, res) => {
   try {
-    // Get credentials from environment variables (server-side only)
+    const { workspaceId, reportId } = req.params;
     const tenantId = process.env.TENANT_ID;
     const clientId = process.env.CLIENT_ID;
     const clientSecret = process.env.CLIENT_SECRET;
-    const workspaceId = process.env.WORKSPACE_ID;
-    const reportId = process.env.REPORT_ID;
 
     // Validate required parameters
-    if (!tenantId || !clientId || !clientSecret || !workspaceId || !reportId) {
-      console.error('Missing environment variables!');
+    if (!tenantId || !clientId || !clientSecret) {
+      console.error('Missing Azure AD configuration!');
       return res.status(500).json({
         error: 'Server configuration error',
-        message: 'Missing required environment variables. Please check .env file.'
+        message: 'Missing required Azure AD credentials in .env file.'
       });
     }
 
+    if (!workspaceId || !reportId) {
+      return res.status(400).json({
+        error: 'Bad Request',
+        message: 'Workspace ID and Report ID are required'
+      });
+    }
+
+    console.log(`Getting embed token for Report ${reportId} in Workspace ${workspaceId}...`);
     console.log('Getting Azure AD token...');
     const azureToken = await getAzureADToken(tenantId, clientId, clientSecret);
     
@@ -413,9 +420,9 @@ app.get('/', (req, res) => {
     version: '1.0.0',
     endpoints: {
       health: 'GET /api/health',
-      embedToken: 'POST /api/powerbi/embed-token',
       workspaces: 'GET /api/powerbi/workspaces',
       workspaceReports: 'GET /api/powerbi/workspaces/:workspaceId/reports',
+      embedToken: 'GET /api/powerbi/workspaces/:workspaceId/reports/:reportId/embed-token',
       tokenCacheStatus: 'GET /api/token-cache/status',
       clearTokenCache: 'POST /api/token-cache/clear'
     }
@@ -434,26 +441,26 @@ app.use((error, req, res, next) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`
-╔═══════════════════════════════════════════════════════════╗
-║                                                           ║
-║   Power BI Embed API Server                              ║
-║   Status: Running                                         ║
-║   Port: ${PORT}                                              ║
-║   Time: ${new Date().toISOString()}           ║
-║                                                           ║
-║   Endpoints:                                              ║
-║   - GET  /                                                ║
-║   - GET  /api/health                                      ║
-║   - POST /api/powerbi/embed-token                         ║
-║   - GET  /api/powerbi/workspaces                          ║
-║   - GET  /api/powerbi/workspaces/:id/reports              ║
-║   - GET  /api/token-cache/status                          ║
-║   - POST /api/token-cache/clear                           ║
-║                                                           ║
-║   Token Caching: DISABLED ⚠️                              ║
-║   (Fetching fresh Azure AD token on every request)       ║
-║                                                           ║
-╚═══════════════════════════════════════════════════════════╝
+╔════════════════════════════════════════════════════════════════╗
+║                                                                ║
+║   Power BI Embed API Server                                   ║
+║   Status: Running                                              ║
+║   Port: ${PORT}                                                   ║
+║   Time: ${new Date().toISOString()}              ║
+║                                                                ║
+║   Endpoints:                                                   ║
+║   - GET  /                                                     ║
+║   - GET  /api/health                                           ║
+║   - GET  /api/powerbi/workspaces                               ║
+║   - GET  /api/powerbi/workspaces/:id/reports                   ║
+║   - GET  /api/powerbi/workspaces/:id/reports/:id/embed-token   ║
+║   - GET  /api/token-cache/status                               ║
+║   - POST /api/token-cache/clear                                ║
+║                                                                ║
+║   Token Caching: DISABLED ⚠️                                   ║
+║   (Fetching fresh Azure AD token on every request)            ║
+║                                                                ║
+╚════════════════════════════════════════════════════════════════╝
 
 Environment Variables Status:
   TENANT_ID: ${process.env.TENANT_ID ? '✓ Loaded' : '✗ Missing'}

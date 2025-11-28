@@ -84,9 +84,9 @@
           <a [href]="report.webUrl" target="_blank" class="btn btn-secondary">
             <span>🔗</span> Open in Power BI
           </a>
-          <button class="btn btn-primary" title="Embed this report (coming soon)">
+          <a [routerLink]="['/workspace', workspaceId, 'report', report.id]" class="btn btn-primary">
             <span>📊</span> Embed Report
-          </button>
+          </a>
         </div>
       </div>
     </div>

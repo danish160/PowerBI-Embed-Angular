@@ -24,7 +24,7 @@ export class WorkspaceDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.params.subscribe(params => {
-      this.workspaceId = params['id'];
+      this.workspaceId = params['workspaceId'];
       this.loadWorkspaceDetails();
       this.loadReports();
     });

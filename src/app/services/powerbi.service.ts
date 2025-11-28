@@ -21,15 +21,13 @@ export class PowerbiService {
   constructor(private http: HttpClient) { }
 
   /**
-   * Get embed token from backend API
-   * Note: Credentials are stored securely on backend, not sent from frontend
+   * Get embed token from backend API for a specific report
+   * @param workspaceId - Power BI Workspace ID
+   * @param reportId - Power BI Report ID
    */
-  getEmbedToken(): Observable<EmbedTokenResponse> {
-    // Backend will use credentials from its .env file
-    // We only send an empty request to trigger token generation
-    return this.http.post<EmbedTokenResponse>(
-      `${environment.apiUrl}/powerbi/embed-token`,
-      {} // Empty payload - backend uses its own environment variables
+  getEmbedToken(workspaceId: string, reportId: string): Observable<EmbedTokenResponse> {
+    return this.http.get<EmbedTokenResponse>(
+      `${environment.apiUrl}/powerbi/workspaces/${workspaceId}/reports/${reportId}/embed-token`
     ).pipe(
       catchError(error => {
         console.error('Error getting embed token:', error);
@@ -40,9 +38,11 @@ export class PowerbiService {
 
   /**
    * Get Power BI embed configuration for powerbi-client-angular
+   * @param workspaceId - Power BI Workspace ID
+   * @param reportId - Power BI Report ID
    */
-  getReportConfig(): Observable<IReportEmbedConfiguration> {
-    return this.getEmbedToken().pipe(
+  getReportConfig(workspaceId: string, reportId: string): Observable<IReportEmbedConfiguration> {
+    return this.getEmbedToken(workspaceId, reportId).pipe(
       map(tokenResponse => {
         // Determine token type (Embed or Aad for Service Principal)
         const tokenType = tokenResponse.tokenType === 'Aad' 

@@ -9,12 +9,12 @@ export const routes: Routes = [
     component: HomeComponent
   },
   {
-    path: 'report',
-    component: PowerbiReportComponent
+    path: 'workspace/:workspaceId',
+    component: WorkspaceDetailComponent
   },
   {
-    path: 'workspace/:id',
-    component: WorkspaceDetailComponent
+    path: 'workspace/:workspaceId/report/:reportId',
+    component: PowerbiReportComponent
   },
   {
     path: '**',
