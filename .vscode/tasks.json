@@ -1,0 +1,79 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Start Backend",
+      "type": "shell",
+      "command": "npm start",
+      "options": {
+        "cwd": "${workspaceFolder}/be-node"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^.*Power BI Embed API Server.*$",
+          "endsPattern": "^.*Environment Variables Status:.*$"
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "servers"
+      }
+    },
+    {
+      "label": "Start Frontend",
+      "type": "shell",
+      "command": "npm start",
+      "options": {
+        "cwd": "${workspaceFolder}/fe-angular"
+      },
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^$",
+          "file": 1,
+          "location": 2,
+          "message": 3
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Generating browser application bundles",
+          "endsPattern": "Compiled successfully."
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "group": "servers"
+      }
+    },
+    {
+      "label": "Start All Servers",
+      "dependsOn": [
+        "Start Backend",
+        "Start Frontend"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Stop All Servers",
+      "type": "shell",
+      "command": "$processIds = (Get-NetTCPConnection -LocalPort 3000,4201 -ErrorAction SilentlyContinue).OwningProcess | Where-Object { $_ -ne 0 } | Select-Object -Unique; if ($processIds) { Get-Process -Id $processIds -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'Stopped all servers' }",
+      "windows": {
+        "command": "$processIds = (Get-NetTCPConnection -LocalPort 3000,4201 -ErrorAction SilentlyContinue).OwningProcess | Where-Object { $_ -ne 0 } | Select-Object -Unique; if ($processIds) { Get-Process -Id $processIds -ErrorAction SilentlyContinue | Stop-Process -Force; Write-Host 'Stopped all servers' }"
+      },
+      "presentation": {
+        "reveal": "always"
+      }
+    }
+  ]
+}
+
