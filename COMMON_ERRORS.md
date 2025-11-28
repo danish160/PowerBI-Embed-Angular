@@ -87,22 +87,26 @@ If this fails, your Azure AD configuration needs fixing.
 **Solutions:**
 
 1. **Backend Not Running**
-   - ✅ Check if backend server is running: `npm run start:server`
+   - ✅ Navigate to backend: `cd be-node`
+   - ✅ Start server: `npm start`
    - ✅ Verify server shows "Running on port 3000"
+   - ✅ Check for ✅ next to environment variables
 
 2. **Wrong API URL**
-   - ✅ Check `src/environments/environment.ts`
+   - ✅ Check `fe-angular/src/environments/environment.ts`
    - ✅ Verify `apiUrl: 'http://localhost:3000/api'`
    - ✅ Ensure no typos (common: `/api` missing)
 
 3. **Port Conflict**
-   - ✅ Check if another app is using port 3000
-   - ✅ Change port in server.js and environment.ts
-   - ✅ Restart backend server
+   - ✅ Check if another app is using port 3000 or 4201
+   - ✅ Change port in `be-node/.env` (PORT=3001)
+   - ✅ Update `fe-angular/angular.json` for frontend port
+   - ✅ Restart both servers
 
 4. **CORS Not Configured**
-   - ✅ Check `server/server.js` has `app.use(cors())`
+   - ✅ Check `be-node/server.js` has `app.use(cors())`
    - ✅ Ensure cors package is installed
+   - ✅ Verify backend allows port 4201
 
 **Quick Test:**
 ```bash
@@ -115,17 +119,18 @@ curl http://localhost:3000/api/health
 
 ---
 
-### Error: "Cannot POST /api/powerbi/embed-token"
+### Error: "Cannot GET /api/powerbi/workspaces" or similar
 
 **Symptoms:**
 - Backend running but endpoint not found
 - 404 or 405 error
 
 **Solutions:**
-- ✅ Verify route is defined in server.js: `app.post('/api/powerbi/embed-token'...)`
+- ✅ Verify backend is running: `cd be-node && npm start`
+- ✅ Check route is defined in `be-node/server.js`
 - ✅ Check for typos in URL path
 - ✅ Restart backend server
-- ✅ Ensure request uses POST method (not GET)
+- ✅ Check backend terminal for errors
 
 ---
 
@@ -138,21 +143,33 @@ curl http://localhost:3000/api/health
 - Import errors for powerbi-client
 
 **Solutions:**
+
+**Frontend:**
 ```bash
-# Install dependencies
+cd fe-angular
 npm install
 
 # If problem persists, clear and reinstall
 rm -rf node_modules package-lock.json
 npm install
 
-# Specifically install Power BI client
-npm install powerbi-client --save
+# Specifically install Power BI Angular client
+npm install powerbi-client-angular --save
+```
+
+**Backend:**
+```bash
+cd be-node
+npm install
+
+# If problem persists
+rm -rf node_modules package-lock.json
+npm install
 ```
 
 ---
 
-### Error: "Cannot find module '@azure/msal-node'"
+### Error: "Cannot find module 'express'" or similar backend errors
 
 **Symptoms:**
 - Backend server won't start
@@ -160,10 +177,14 @@ npm install powerbi-client --save
 
 **Solutions:**
 ```bash
+# Navigate to backend
+cd be-node
+
 # Install backend dependencies
-npm install express cors axios dotenv @azure/msal-node
+npm install express cors axios dotenv
 
 # Or reinstall everything
+rm -rf node_modules package-lock.json
 npm install
 ```
 
@@ -206,9 +227,9 @@ npx ng serve
    - ✅ Check Network tab for failed requests
 
 2. **Power BI SDK Not Loaded**
-   - ✅ Verify powerbi-client is installed
-   - ✅ Check import statement in powerbi.service.ts
-   - ✅ Restart Angular dev server
+   - ✅ Verify powerbi-client-angular is installed in `fe-angular/`
+   - ✅ Check import statement in `fe-angular/src/app/services/powerbi.service.ts`
+   - ✅ Restart Angular dev server: `cd fe-angular && npm start`
 
 3. **Invalid Embed Configuration**
    - ✅ Check embedUrl is valid in response
@@ -283,26 +304,27 @@ ngOnInit(): void {
 
 ## ⚙️ Configuration Errors
 
-### Error: "Missing required parameters"
+### Error: "Missing required parameters" or environment variable errors
 
 **Symptoms:**
-- Backend returns 400 error
+- Backend returns 400 error or won't start
 - "Missing required parameters" in response
+- ❌ shown next to environment variables in backend logs
 
 **Solutions:**
-```typescript
-// Check environment.ts has ALL fields:
-export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:3000/api',  // ✅ Required
-  powerbi: {
-    tenantId: 'xxx',      // ✅ Required
-    clientId: 'xxx',      // ✅ Required
-    clientSecret: 'xxx',  // ✅ Required
-    workspaceId: 'xxx',   // ✅ Required
-    reportId: 'xxx'       // ✅ Required
-  }
-};
+```bash
+# Check be-node/.env file exists and has ALL fields:
+TENANT_ID=your_tenant_id_here
+CLIENT_ID=your_client_id_here  
+CLIENT_SECRET=your_client_secret_here
+PORT=3000
+
+# Common issues:
+# ✅ File must be named exactly ".env" (with dot)
+# ✅ File must be in be-node/ directory
+# ✅ No quotes around values
+# ✅ No spaces around = sign
+# ✅ Restart backend after editing .env
 ```
 
 ---
@@ -310,30 +332,49 @@ export const environment = {
 ### Error: Environment file not updating
 
 **Symptoms:**
-- Changed environment.ts but app still uses old values
+- Changed `.env` or `environment.ts` but app still uses old values
 - Updates not reflected in running app
 
 **Solutions:**
-- ✅ Stop Angular dev server (Ctrl+C)
-- ✅ Restart: `npm start`
+
+**Backend (.env changes):**
+```bash
+# Stop backend server (Ctrl+C)
+cd be-node
+npm start
+# .env is read at startup - must restart!
+```
+
+**Frontend (environment.ts changes):**
+```bash
+# Stop Angular dev server (Ctrl+C)
+cd fe-angular
+npm start
+# Or Angular will auto-reload on file changes
+```
+
+**Browser:**
 - ✅ Hard refresh browser (Ctrl+Shift+R)
 - ✅ Clear browser cache
+- ✅ Open DevTools → Network tab → Disable cache
 
 ---
 
 ## 🖥️ Development Server Errors
 
-### Error: "Port 4200 is already in use"
+### Error: "Port 4201 is already in use"
 
 **Solutions:**
 ```bash
-# Option 1: Kill process using port
-# Windows
-netstat -ano | findstr :4200
-taskkill /PID <PID> /F
+# Windows - find and kill process
+Get-NetTCPConnection -LocalPort 4201 -ErrorAction SilentlyContinue
+# Note the PID, then:
+Stop-Process -Id <PID> -Force
 
-# Option 2: Use different port
-ng serve --port 4201
+# Or use different port
+cd fe-angular
+ng serve --port 4202
+# Then update backend CORS to allow port 4202
 ```
 
 ---
@@ -343,11 +384,24 @@ ng serve --port 4201
 **Solutions:**
 ```bash
 # Windows - find and kill process
-netstat -ano | findstr :3000
-taskkill /PID <PID> /F
+Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue
+# Note the PID, then:
+Stop-Process -Id <PID> -Force
 
-# Or change port in server.js and environment.ts
-const PORT = process.env.PORT || 3001;
+# Or change port in be-node/.env
+PORT=3001
+
+# Then update fe-angular/src/environments/environment.ts
+apiUrl: 'http://localhost:3001/api'
+```
+
+---
+
+### Kill Multiple Ports at Once (Windows)
+```powershell
+# Kill processes on both ports
+$processIds = (Get-NetTCPConnection -LocalPort 3000,4201 -ErrorAction SilentlyContinue).OwningProcess | Where-Object { $_ -ne 0 } | Select-Object -Unique
+if ($processIds) { Get-Process -Id $processIds | Stop-Process -Force }
 ```
 
 ---
@@ -356,20 +410,19 @@ const PORT = process.env.PORT || 3001;
 
 ### Enable Detailed Logging
 
-**Backend (server.js):**
-```javascript
-// Add before route handlers
-app.use((req, res, next) => {
-  console.log('📥 Request:', req.method, req.path);
-  console.log('📦 Body:', JSON.stringify(req.body, null, 2));
-  next();
-});
-```
+**Backend (be-node/server.js):**
+The backend already has detailed logging! Check your backend terminal for:
+- ✅/❌ Environment variable status
+- 🔄 Azure AD token requests
+- 📊 Power BI API calls
+- ⚠️ Warnings and errors
 
-**Frontend (powerbi.service.ts):**
+**Frontend (fe-angular/src/app/services/powerbi.service.ts):**
 ```typescript
-getEmbedToken(): Observable<EmbedTokenResponse> {
+getEmbedToken(workspaceId: string, reportId: string): Observable<any> {
   console.log('🔑 Requesting embed token...');
+  console.log('📊 Workspace ID:', workspaceId);
+  console.log('📄 Report ID:', reportId);
   console.log('📍 API URL:', environment.apiUrl);
   // ... rest of code
 }
@@ -378,16 +431,20 @@ getEmbedToken(): Observable<EmbedTokenResponse> {
 ### Test Backend Independently
 
 ```bash
-# Test with curl or PowerShell
-curl -X POST http://localhost:3000/api/powerbi/embed-token \
-  -H "Content-Type: application/json" \
-  -d '{
-    "tenantId": "YOUR_TENANT_ID",
-    "clientId": "YOUR_CLIENT_ID",
-    "clientSecret": "YOUR_CLIENT_SECRET",
-    "workspaceId": "YOUR_WORKSPACE_ID",
-    "reportId": "YOUR_REPORT_ID"
-  }'
+# Test health endpoint
+curl http://localhost:3000/api/health
+
+# Test Azure AD authentication
+curl http://localhost:3000/api/test-auth
+
+# Test workspace discovery
+curl http://localhost:3000/api/powerbi/workspaces
+
+# Test reports in workspace (replace WORKSPACE_ID)
+curl http://localhost:3000/api/powerbi/workspaces/WORKSPACE_ID/reports
+
+# Test embed token generation (replace IDs)
+curl http://localhost:3000/api/powerbi/workspaces/WORKSPACE_ID/reports/REPORT_ID/embed-token
 ```
 
 ---

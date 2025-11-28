@@ -1,8 +1,14 @@
 # Power BI Token Caching Strategy
 
+## ⚠️ Current Status
+
+**Token caching is currently DISABLED** for debugging purposes. The implementation is present in `be-node/server.js` but commented out.
+
+To enable caching, search for "Token caching logic" in `be-node/server.js` and uncomment the relevant sections.
+
 ## Overview
 
-This application implements **server-side token caching** for Azure AD tokens to optimize performance and reduce API calls to Microsoft Azure AD.
+This document explains the **server-side token caching** implementation for Azure AD tokens, which can optimize performance and reduce API calls to Microsoft Azure AD when enabled.
 
 ## 🔐 Security Architecture
 
@@ -185,6 +191,51 @@ For production, consider:
 - Cache tokens indefinitely
 - Ignore token expiry
 - Share tokens across different security contexts
+
+## 🔧 How to Enable Caching
+
+### Current Implementation Location
+
+File: `be-node/server.js`
+
+### Steps to Enable
+
+1. **Open `be-node/server.js`**
+
+2. **Find the token cache initialization** (around line 20-25):
+   ```javascript
+   // Uncomment this block:
+   let tokenCache = {
+     token: null,
+     expiresAt: null
+   };
+   ```
+
+3. **Find the `getAzureADToken()` function** (around line 30-80):
+   ```javascript
+   // Uncomment the cache check logic at the start
+   // Uncomment the cache storage logic before return
+   ```
+
+4. **Restart the backend server**:
+   ```bash
+   cd be-node
+   npm start
+   ```
+
+5. **Verify caching is working**:
+   ```bash
+   # Check cache status
+   curl http://localhost:3000/api/token-cache/status
+   
+   # Should return cached: true after first request
+   ```
+
+### Why It's Currently Disabled
+
+Token caching was temporarily disabled for debugging to ensure we get fresh tokens for every request. This helps identify authentication and permission issues more easily during development.
+
+Once your application is stable and working correctly, you should **enable caching** to improve performance and reduce Azure AD API calls.
 
 ## 📚 References
 

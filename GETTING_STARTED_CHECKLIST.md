@@ -63,21 +63,11 @@ Print this checklist and check off each item as you complete it!
   - [ ] Entire organization, OR
   - [ ] Specific security groups (add your SP)
 - [ ] Click "Apply"
+- [ ] ⚠️ **CRITICAL**: This must be enabled or reports won't load!
 
-### Step 5: Get Workspace Information
+### Step 5: Grant Service Principal Workspace Access
 - [ ] Open your Power BI workspace
-- [ ] Copy the URL
-- [ ] **Extract Workspace ID from URL**: `________________________`
-  - URL format: `https://app.powerbi.com/groups/WORKSPACE_ID/...`
-
-### Step 6: Get Report Information
-- [ ] Open your Power BI report
-- [ ] Copy the URL
-- [ ] **Extract Report ID from URL**: `________________________`
-  - URL format: `https://app.powerbi.com/groups/{workspace}/reports/REPORT_ID/...`
-
-### Step 7: Grant Service Principal Access
-- [ ] In your workspace, click "Access"
+- [ ] Click "Access" or "Workspace access"
 - [ ] Click "Add people or groups"
 - [ ] Search for your Service Principal (by app name)
 - [ ] Assign role:
@@ -90,82 +80,102 @@ Print this checklist and check off each item as you complete it!
 
 ## 💻 Application Setup Checklist
 
-### Step 8: Install Dependencies
-- [ ] Open terminal in project directory
-- [ ] Run: `npm install`
+### Step 6: Install Backend Dependencies
+- [ ] Open terminal in project root
+- [ ] Navigate to backend:
+  ```bash
+  cd be-node
+  ```
+- [ ] Install dependencies:
+  ```bash
+  npm install
+  ```
 - [ ] Wait for installation to complete
 - [ ] Verify no errors in output
 
-### Step 9: Configure Environment File
-- [ ] Open `src/environments/environment.ts`
-- [ ] Replace `YOUR_TENANT_ID` with actual Tenant ID
-- [ ] Replace `YOUR_CLIENT_ID` with actual Client ID
-- [ ] Replace `YOUR_CLIENT_SECRET` with actual Client Secret
-- [ ] Replace `YOUR_WORKSPACE_ID` with actual Workspace ID
-- [ ] Replace `YOUR_REPORT_ID` with actual Report ID
+### Step 7: Configure Backend Environment File
+- [ ] Create `.env` file in `be-node/` directory
+- [ ] Copy from `.env.example` if available
+- [ ] Add your credentials:
+  ```
+  TENANT_ID=your_tenant_id_here
+  CLIENT_ID=your_client_id_here
+  CLIENT_SECRET=your_client_secret_here
+  PORT=3000
+  ```
+- [ ] Replace all placeholder values with actual credentials
 - [ ] Save the file
+- [ ] ⚠️ **NEVER commit `.env` to Git!**
 
-### Step 10: Verify Configuration
-Review your `environment.ts` - it should look like:
-```typescript
-export const environment = {
-  production: false,
-  apiUrl: 'http://localhost:3000/api',
-  powerbi: {
-    tenantId: '12345678-1234-1234-1234-123456789abc',
-    clientId: '87654321-4321-4321-4321-cba987654321',
-    clientSecret: 'abc123~DefGHI456.JklMNO789-PqrSTU012',
-    workspaceId: 'abcdef12-3456-7890-abcd-ef1234567890',
-    reportId: '98765432-fedc-ba98-7654-321098765432'
-  }
-};
-```
-- [ ] All placeholders replaced with real GUIDs
-- [ ] No "YOUR_" prefixes remaining
-- [ ] All values in single quotes
-- [ ] No extra spaces or line breaks
+### Step 8: Install Frontend Dependencies
+- [ ] Open a new terminal in project root
+- [ ] Navigate to frontend:
+  ```bash
+  cd fe-angular
+  ```
+- [ ] Install dependencies:
+  ```bash
+  npm install
+  ```
+- [ ] Wait for installation to complete
+- [ ] Verify no errors in output
+
+### Step 9: Configure Frontend Environment
+- [ ] Open `fe-angular/src/environments/environment.ts`
+- [ ] Verify API URL is correct:
+  ```typescript
+  export const environment = {
+    production: false,
+    apiUrl: 'http://localhost:3000/api'
+  };
+  ```
+- [ ] Save the file (usually no changes needed)
 
 ---
 
 ## 🚀 Running the Application Checklist
 
-### Step 11: Start Backend Server
-- [ ] Open terminal in project directory
-- [ ] Run: `npm run start:server`
+### Step 10: Start Backend Server
+- [ ] Open terminal in `be-node/` directory
+- [ ] Run: `npm start`
 - [ ] Verify server starts successfully
 - [ ] Look for message: "Power BI Embed API Server - Status: Running"
+- [ ] Check environment variables show ✅ (checkmarks)
 - [ ] Server should be running on port 3000
 - [ ] Keep this terminal open
 
-### Step 12: Start Frontend Application
+### Step 11: Start Frontend Application
 - [ ] Open a NEW terminal (keep backend terminal running)
-- [ ] Navigate to project directory
-- [ ] Run: `npm start` or `ng serve`
+- [ ] Navigate to `fe-angular/` directory
+- [ ] Run: `npm start`
 - [ ] Wait for compilation to complete
 - [ ] Look for message: "Compiled successfully"
-- [ ] Application should be available at http://localhost:4200
+- [ ] Application should be available at http://localhost:4201
+- [ ] Browser may open automatically
 
-### Step 13: Test the Application
-- [ ] Open browser
-- [ ] Navigate to: http://localhost:4200
-- [ ] Verify loading spinner appears
+### Step 12: Test the Application
+- [ ] Open browser to http://localhost:4201
+- [ ] Verify you see the home page with workspaces
+- [ ] Click on a workspace to see reports
+- [ ] Click "Embed Report" on a report
 - [ ] Wait for report to load
 - [ ] Verify report displays correctly
-- [ ] Test refresh button
-- [ ] Test fullscreen button
-- [ ] Interact with report (click visuals, use filters)
+- [ ] Test interactions (click visuals, use filters)
+- [ ] Try refresh button
+- [ ] Try fullscreen button
 
 ---
 
 ## ✅ Success Verification Checklist
 
 If everything is working, you should see:
-- [ ] Beautiful gradient header with title
-- [ ] Three control buttons (Refresh, Fullscreen, Print)
-- [ ] Your Power BI report embedded and fully interactive
-- [ ] No error messages
+- [ ] Home page displays available workspaces
+- [ ] Clicking workspace shows list of reports
+- [ ] Reports embed and are fully interactive
+- [ ] No error messages in the UI
 - [ ] Report responds to interactions
 - [ ] Data loads correctly
+- [ ] Navigation between pages works
 
 ### Browser Console Check
 - [ ] Open browser DevTools (F12)
@@ -174,14 +184,15 @@ If everything is working, you should see:
   - [ ] "Report loaded successfully"
   - [ ] "Report rendered successfully"
 - [ ] Verify NO red error messages
+- [ ] ⚠️ If you see 403 errors, check Step 4 (Tenant settings)
 
 ### Backend Terminal Check
 - [ ] Check backend terminal output
-- [ ] Look for these log messages:
+- [ ] Look for successful API calls:
   - [ ] "Getting Azure AD token..."
-  - [ ] "Getting Power BI embed token..."
   - [ ] "Successfully generated embed token"
 - [ ] Verify NO error messages
+- [ ] Should see successful token generation logs
 
 ---
 
@@ -193,18 +204,25 @@ If something doesn't work, verify:
 - [ ] Both terminals are running (backend and frontend)
 - [ ] No typos in Tenant ID, Client ID, Client Secret
 - [ ] Service Principal has workspace access
-- [ ] Service Principal APIs enabled in tenant settings
+- [ ] **Service Principal APIs enabled in tenant settings** (most common issue!)
 - [ ] Client secret hasn't expired
-- [ ] Workspace ID and Report ID are correct
-- [ ] No firewall blocking localhost ports
-- [ ] Browser allows localhost connections
+- [ ] No firewall blocking localhost ports 3000 or 4201
+- [ ] Backend `.env` file exists in `be-node/` directory
+- [ ] Frontend can connect to backend (check browser Network tab)
 
 ### Quick Tests
-- [ ] Test backend health: Open http://localhost:3000/api/health
-  - Should return: `{"status":"OK",...}`
+- [ ] Test backend health:
+  ```bash
+  curl http://localhost:3000/api/health
+  ```
+  Should return: `{"status":"OK",...}`
 - [ ] Test Azure AD token manually (see CONFIGURATION_EXAMPLE.md)
 - [ ] Verify Service Principal shows in workspace access list
 - [ ] Check browser console for specific error messages
+- [ ] Check that ports 3000 and 4201 are not in use:
+  ```powershell
+  Get-NetTCPConnection -LocalPort 3000,4201
+  ```
 
 ---
 
@@ -222,12 +240,8 @@ AZURE AD CREDENTIALS:
 ├─ Client Secret:  ________________________________
 └─ Secret Expires: _______________
 
-POWER BI IDENTIFIERS:
-├─ Workspace ID:   ________________________________
-└─ Report ID:      ________________________________
-
 APPLICATION URLs:
-├─ Frontend:       http://localhost:4200
+├─ Frontend:       http://localhost:4201
 ├─ Backend:        http://localhost:3000
 └─ Backend Health: http://localhost:3000/api/health
 
@@ -242,12 +256,13 @@ _______________________________________________________
 ## 🎉 Completion Checklist
 
 - [ ] Application runs successfully
-- [ ] Report loads and displays
+- [ ] Workspaces load and display
+- [ ] Reports load and display
 - [ ] All controls work (refresh, fullscreen, print)
 - [ ] No errors in browser console
 - [ ] No errors in backend terminal
-- [ ] Report is interactive (filters, clicks work)
-- [ ] Credentials are secured (.gitignore configured)
+- [ ] Reports are interactive (filters, clicks work)
+- [ ] Credentials are secured (`.env` in `.gitignore`)
 - [ ] Documentation reviewed and understood
 
 ---
@@ -256,13 +271,13 @@ _______________________________________________________
 
 Once everything works:
 - [ ] Read ARCHITECTURE.md to understand how it works
+- [ ] Review PROJECT_STRUCTURE.md for project organization
 - [ ] Customize the UI (colors, layout, branding)
-- [ ] Add more reports (modify code to support multiple)
-- [ ] Implement user authentication (if needed)
+- [ ] Plan user authentication (if needed)
 - [ ] Plan production deployment
 - [ ] Set up CI/CD pipeline
 - [ ] Configure production environment variables
-- [ ] Test with different reports
+- [ ] Test with different workspaces and reports
 - [ ] Show it to stakeholders! 🎊
 
 ---
@@ -270,13 +285,33 @@ Once everything works:
 ## ⏱️ Estimated Time
 
 - Azure Setup: 15-20 minutes
-- Application Setup: 5 minutes
+- Application Setup: 10 minutes
 - Testing & Verification: 5 minutes
-- **Total: ~30 minutes**
+- **Total: ~30-35 minutes**
 
 ---
 
-**You've got this! Follow the checklist step-by-step and you'll have your Power BI report embedded in no time! 🚀**
+## 🆘 Most Common Issue
+
+### Power BI 403 Forbidden Errors
+
+If reports don't load and you see 403 errors in browser console:
+
+**THE ISSUE**: "Allow service principals to use Power BI APIs" is NOT enabled in Power BI Admin Portal.
+
+**THE FIX**: 
+1. Go to Power BI Admin Portal (requires admin access)
+2. Tenant settings → Developer settings
+3. Enable "Allow service principals to use Power BI APIs"
+4. Apply to entire organization or specific security group
+5. Wait 5-10 minutes for changes to propagate
+6. Refresh your application
+
+**This is the #1 reason reports fail to embed!**
+
+---
+
+**You've got this! Follow the checklist step-by-step and you'll have your Power BI reports embedded in no time! 🚀**
 
 ---
 
@@ -287,5 +322,5 @@ Refer to these files:
 - **Detailed Docs**: README.md
 - **Configuration Help**: CONFIGURATION_EXAMPLE.md
 - **Architecture Info**: ARCHITECTURE.md
-- **Complete Overview**: PROJECT_SUMMARY.md
-
+- **Error Solutions**: COMMON_ERRORS.md
+- **Project Structure**: PROJECT_STRUCTURE.md

@@ -10,45 +10,55 @@ This document explains the architecture of the Power BI Embed Angular applicatio
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────┐    │
-│  │         Angular Application (Port 4200)               │    │
+│  │         Angular Application (Port 4201)               │    │
 │  │                                                         │    │
 │  │  ┌─────────────────────────────────────────────┐     │    │
-│  │  │  PowerBI Report Component                   │     │    │
-│  │  │  - Displays embedded report                 │     │    │
-│  │  │  - Handles user interactions                │     │    │
+│  │  │  Home / Navigation / Report Components      │     │    │
+│  │  │  - Browse workspaces                        │     │    │
+│  │  │  - View reports in workspace                │     │    │
+│  │  │  - Embed selected report                    │     │    │
 │  │  │  - Manages loading/error states             │     │    │
 │  │  └─────────────────────────────────────────────┘     │    │
 │  │                        │                              │    │
 │  │                        ▼                              │    │
 │  │  ┌─────────────────────────────────────────────┐     │    │
-│  │  │  PowerBI Service                            │     │    │
+│  │  │  PowerBI & Workspace Services               │     │    │
+│  │  │  - Gets workspaces list from backend        │     │    │
+│  │  │  - Gets reports list from backend           │     │    │
 │  │  │  - Requests embed token from backend        │     │    │
 │  │  │  - Configures Power BI client               │     │    │
-│  │  │  - Embeds report in DOM                     │     │    │
 │  │  └─────────────────────────────────────────────┘     │    │
 │  │                        │                              │    │
 │  └────────────────────────┼──────────────────────────────┘    │
 │                           │                                    │
 └───────────────────────────┼────────────────────────────────────┘
-                            │ HTTP Request
-                            │ (POST /api/powerbi/embed-token)
+                            │ HTTP Requests
+                            │ - GET /api/powerbi/workspaces
+                            │ - GET /api/powerbi/workspaces/:id/reports
+                            │ - GET /api/powerbi/.../embed-token
                             ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                   Backend API Server (Port 3000)                │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  ┌───────────────────────────────────────────────────────┐    │
-│  │  Express.js REST API                                  │    │
+│  │  Express.js REST API (be-node/server.js)             │    │
 │  │                                                         │    │
 │  │  Endpoints:                                            │    │
-│  │  • POST /api/powerbi/embed-token                      │    │
 │  │  • GET  /api/health                                    │    │
+│  │  • GET  /api/test-auth                                 │    │
+│  │  • GET  /api/powerbi/workspaces                       │    │
+│  │  • GET  /api/powerbi/workspaces/:id/reports           │    │
+│  │  • GET  /api/powerbi/workspaces/:wid/reports/:rid/    │    │
+│  │         embed-token                                    │    │
+│  │  • GET  /api/token-cache/status                       │    │
+│  │  • POST /api/token-cache/clear                        │    │
 │  │                                                         │    │
 │  │  Responsibilities:                                     │    │
-│  │  1. Receives Service Principal credentials             │    │
+│  │  1. Reads Service Principal credentials from .env     │    │
 │  │  2. Authenticates with Azure AD                       │    │
-│  │  3. Gets Power BI embed token                         │    │
-│  │  4. Returns token to frontend                         │    │
+│  │  3. Calls Power BI REST API                           │    │
+│  │  4. Returns data to frontend                          │    │
 │  └───────────────────────────────────────────────────────┘    │
 │                           │                                    │
 └───────────────────────────┼────────────────────────────────────┘
@@ -60,8 +70,10 @@ This document explains the architecture of the Power BI Embed Angular applicatio
         │    Azure AD (OAuth)      │  │  Power BI REST API   │
         │                          │  │                      │
         │  - Validates Service     │  │  - Validates token   │
-        │    Principal             │  │  - Returns embed     │
-        │  - Issues access token   │  │    URL & embed token │
+        │    Principal             │  │  - Returns workspaces│
+        │  - Issues access token   │  │  - Returns reports   │
+        │  - Cached server-side    │  │  - Returns embed     │
+        │    (1 hour)              │  │    URL & embed token │
         └──────────────────────────┘  └──────────────────────┘
 ```
 
@@ -69,46 +81,89 @@ This document explains the architecture of the Power BI Embed Angular applicatio
 
 ### Step-by-Step Process:
 
-1. **User opens the application** in browser (http://localhost:4200)
+1. **User opens the application** in browser (http://localhost:4201)
 
-2. **Angular app initializes** and loads PowerBI Report Component
+2. **Angular app initializes** and loads Home Component
 
-3. **Component requests embed configuration** from PowerBI Service
-
-4. **PowerBI Service sends HTTP request to backend** with Service Principal credentials:
+3. **Home Component requests workspaces** from Workspace Service:
    ```
-   POST http://localhost:3000/api/powerbi/embed-token
-   Body: { tenantId, clientId, clientSecret, workspaceId, reportId }
+   GET http://localhost:3000/api/powerbi/workspaces
    ```
 
-5. **Backend authenticates with Azure AD**:
+4. **Backend authenticates with Azure AD** (reads credentials from `.env`):
    ```
    POST https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token
    Body: { grant_type, client_id, client_secret, scope }
    ```
 
-6. **Azure AD returns access token** (if credentials are valid)
+5. **Azure AD returns access token** (cached server-side for 1 hour)
 
-7. **Backend uses access token to call Power BI API**:
+6. **Backend calls Power BI API** to get workspaces:
    ```
-   GET https://api.powerbi.com/v1.0/myorg/groups/{workspaceId}/reports/{reportId}
-   POST https://api.powerbi.com/v1.0/myorg/groups/{workspaceId}/reports/{reportId}/GenerateToken
+   GET https://api.powerbi.com/v1.0/myorg/groups
+   Authorization: Bearer {azure_ad_token}
    ```
 
-8. **Power BI API returns**:
-   - Embed URL
-   - Embed token
-   - Report metadata
+7. **User selects a workspace** → App navigates to `/workspace/:id`
 
-9. **Backend sends response to frontend** with embed configuration
+8. **Workspace Detail Component requests reports**:
+   ```
+   GET http://localhost:3000/api/powerbi/workspaces/{workspaceId}/reports
+   ```
 
-10. **PowerBI Service embeds report** using Power BI JavaScript SDK
+9. **Backend calls Power BI API** to get reports:
+   ```
+   GET https://api.powerbi.com/v1.0/myorg/groups/{workspaceId}/reports
+   ```
 
-11. **User interacts with embedded report** directly in browser
+10. **User clicks "Embed Report"** → App navigates to `/workspace/:wid/report/:rid`
+
+11. **PowerBI Report Component requests embed token**:
+    ```
+    GET http://localhost:3000/api/powerbi/workspaces/{wid}/reports/{rid}/embed-token
+    ```
+
+12. **Backend generates embed token**:
+    ```
+    GET https://api.powerbi.com/v1.0/myorg/groups/{wid}/reports/{rid}
+    POST https://api.powerbi.com/v1.0/myorg/groups/{wid}/reports/{rid}/GenerateToken
+    ```
+
+13. **Power BI API returns**:
+    - Embed URL
+    - Embed token
+    - Report metadata
+
+14. **Backend sends response to frontend** with embed configuration
+
+15. **PowerBI Service embeds report** using `powerbi-client-angular`
+
+16. **User interacts with embedded report** directly in browser
 
 ## 📦 Component Responsibilities
 
-### Frontend (Angular)
+### Frontend (Angular - fe-angular/)
+
+#### `HomeComponent`
+- **Purpose**: Landing page showing available workspaces
+- **Features**:
+  - Displays workspace cards
+  - Click to navigate to workspace details
+  - Loading states and error handling
+
+#### `NavigationComponent`
+- **Purpose**: Sidebar navigation
+- **Features**:
+  - Lists available workspaces
+  - Active route highlighting
+  - Quick workspace switching
+
+#### `WorkspaceDetailComponent`
+- **Purpose**: Shows reports within a selected workspace
+- **Features**:
+  - Displays report cards
+  - "Embed Report" button for each report
+  - Navigates to report embedding page
 
 #### `PowerbiReportComponent`
 - **Purpose**: UI component for displaying the embedded report
@@ -116,26 +171,41 @@ This document explains the architecture of the Power BI Embed Angular applicatio
   - Loading spinner
   - Error handling with retry
   - Report controls (refresh, fullscreen, print)
+  - Uses `<powerbi-report>` component from `powerbi-client-angular`
 - **Lifecycle**:
-  - `ngOnInit()`: Loads report on component initialization
+  - `ngOnInit()`: Loads report based on route parameters
+  - `ngAfterViewInit()`: Gets report instance
   - `ngOnDestroy()`: Cleans up event listeners
 
 #### `PowerbiService`
-- **Purpose**: Handles all Power BI-related operations
+- **Purpose**: Handles Power BI embedding operations
 - **Methods**:
-  - `getEmbedToken()`: Fetches token from backend
-  - `getPowerBIConfig()`: Prepares embed configuration
-  - `embedReport()`: Embeds report in DOM element
+  - `getEmbedToken(workspaceId, reportId)`: Fetches token from backend
+  - `getReportConfig(workspaceId, reportId)`: Prepares embed configuration
 - **Configuration**: Sets up report display options (filters, navigation, layout)
 
-### Backend (Node.js/Express)
+#### `WorkspaceService`
+- **Purpose**: Handles workspace and report discovery
+- **Methods**:
+  - `getWorkspaces()`: Fetches all workspaces from backend
+  - `getReports(workspaceId)`: Fetches reports in a workspace from backend
+
+### Backend (Node.js/Express - be-node/)
 
 #### `server.js`
-- **Purpose**: Secure server-side authentication handler
+- **Purpose**: Secure server-side authentication and API proxy
 - **Key Functions**:
   - `getAzureADToken()`: Authenticates Service Principal with Azure AD
-  - `getPowerBIEmbedToken()`: Gets embed token from Power BI API
-- **Security**: Keeps Service Principal credentials server-side only
+  - `GET /api/powerbi/workspaces`: Lists all workspaces
+  - `GET /api/powerbi/workspaces/:id/reports`: Lists reports in workspace
+  - `GET /api/powerbi/workspaces/:wid/reports/:rid/embed-token`: Generates embed token
+- **Security**: 
+  - Reads credentials from `.env` file
+  - Keeps Service Principal credentials server-side only
+  - Never exposes credentials to frontend
+- **Token Management**:
+  - Caches Azure AD tokens (can be disabled)
+  - Provides cache status and clear endpoints
 
 ## 🔐 Security Architecture
 
